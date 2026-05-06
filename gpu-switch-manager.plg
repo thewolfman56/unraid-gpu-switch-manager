@@ -1,0 +1,21 @@
+<!DOCTYPE PLUGIN>
+<PLUGIN version="1.0">
+    <NAME>GPU Switch Manager</NAME>
+    <VERSION>1.0.0</VERSION>
+    <TITLE>GPU Switch Manager</TITLE>
+    <AUTHOR>thewolfman56</AUTHOR>
+    <URL>https://github.com/thewolfman56/unraid-gpu-switch-manager</URL>
+    <DESCRIPTION>Automated GPU driver switching for VM passthrough and Docker. Toggle GPUs between host/Docker use and VM isolation without manual XML editing. Includes real-time GPU stats dashboard and persistent profile management.</DESCRIPTION>
+    <ICON>assets/icon.png</ICON>
+    <REQUIRES>Unraid 6.12.0+</REQUIRES>
+    <CHANGES>
+        ###1.0.0
+        - Initial release
+        - Phase 0: Plugin foundation complete
+        - Basic directory structure and configuration files
+    </CHANGES>
+    <FILE>
+        <URL>https://github.com/thewolfman56/unraid-gpu-switch-manager/releases/download/v1.0.0/gpu-switch-manager-1.0.0.txz</URL>
+        <MD5>de37b76ab0ebbdab9c5ec31b02359cb5</MD5>
+    </FILE>
+</PLUGIN>

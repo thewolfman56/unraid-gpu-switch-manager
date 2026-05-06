@@ -1,0 +1,64 @@
+# Implementation Plan: GPU Switch Manager
+
+## Overview
+GPU Switch Manager provides a centralized interface to toggle GPU drivers and assignments on Unraid. It automates the process of binding/unbinding GPUs to vfio-pci for VM passthrough or ensuring they are available for Docker-based AI and transcoding workflows.
+
+## Requirements
+- Automated VFIO Binding: Toggle GPUs between host/Docker use and VM isolation without manual XML editing.
+- Service Dependency Management: Automatically stop/start affected Docker containers and VMs during driver handovers.
+- Use a web interface for settings so that a docker container can be labeled as a gpu container, a cpu replacement container, or ignored by the plugin
+- Real-time Status Dashboard: Display current GPU utilization, temperature, and driver assignment (NVIDIA/AMD/Intel) as a widget on the dashboard tab.
+- Persistent Configuration: Save preferred "profiles" (e.g., "Nvidia GPU [Model #] [GPU #]" tracks "Nvidia GPU RTX 5070 #1", which VM will use this GPU, which docker container use this GPU, and any CPU docker container replacements).
+- Starting the VM will save the states of all docker containers, shut down any docker containers using the GPU, verify the gpu containers are completely shut down, start cpu replacement containers (if any for the profile), bind gpu to vfio-pci for the VM, verify that the gpu is bound to the vfio-pci, and start the vm.
+- Shutting down the VM will unbind the vfio-pci, verify the vfio-pci is released, shut down any CPU replacement containers, verify the cpu containers are shutdown, and restart any gpu container that was running when the VM was started.
+- Events are triggered by the starting of a VM or the stopping of the VM.
+
+## Architecture Changes
+- /usr/local/emhttp/plugins/gpu.switch.manager/: Plugin web GUI files (PHP, HTML, JS).
+- /usr/local/emhttp/plugins/gpu.switch.manager/event/: Custom event scripts for Unraid’s event manager to handle state changes.
+- /boot/config/plugins/gpu.switch.manager/: Persistent storage for user profiles and device IDs on the Unraid flash drive.
+
+## Implementation Steps
+
+### Phase 1: Core Scaffolding & Device Discovery
+1. **Plugin Directory Structure** (File: plugin.plg)
+   - Action: Define the XML structure for the Unraid plugin manager to install and update the tool.
+   - Why: RMandatory for integration into the Unraid "Plugins" tab.
+   - Dependencies: None
+   - Risk: Low
+
+2. **PCI Device Enumeration** (File: scripts/list_gpus.sh)
+   - Action: Use lspci and nvidia-smi to identify available GPUs and their current driver attachment.
+   - Why: The plugin must know which devices are available before it can manage them.
+   - Dependencies: Phase 1, Step 1
+   - Risk: Medium (Handling multi-GPU setups or identical IDs).
+
+### Phase 2: Driver Toggling Logic
+1. **VFIO Switcher Script** (File: scripts/toggle_vfio.php)
+   - Action: Execute modprobe commands and update /etc/modprobe.d/vfio.conf dynamically.
+   - Why: This is the core engine that reassigns the GPU hardware at the kernel level.
+   - Dependencies: Phase 1, Step 2
+   - Risk: High (Potential for system instability if the GPU is in use).
+
+2. **Docker/VM Interlock** (File: scripts/service_manager.sh)
+   - Action: Check for active processes on the GPU and gracefully stop containers/VMs before switching drivers.
+   - Why: Prevents kernel panics or "device busy" errors during the handoff.
+   - Dependencies: Phase 2, Step 1
+   - Risk: Medium
+
+## Testing Strategy
+- Unit tests: cripts/list_gpus.sh (verify correct identification of NVIDIA vs Intel GPUs or iGPUs).
+- Integration tests: Profile switching flow (triggering a switch and verifying the change in /config/vfio.conf).
+- E2E tests: User journey: "Open Dashboard -> Click 'Switch to VM' -> Verify GPU is isolated in Unraid VM Settings."
+
+## Risks & Mitigations
+- **Risk**: System Lockup - Description: Unbinding a GPU currently used by the Unraid console or a primary display.
+  - Mitigation: Implement a "Safe Check" that prevents switching the primary boot GPU unless a secondary card is detected.
+- **Risk**: Persistent Config Corruption - Description: Power loss while writing to the Unraid flash drive (/boot/config).
+  - Mitigation: Use atomic write operations and maintain a .bak file of the vfio.conf.
+
+## Success Criteria
+- [ ] Successfully binds/unbinds a GPU to vfio-pci via the GUI.
+- [ ] Displays real-time NVIDIA GPU stats (Temp/Power) using nvidia-smi.
+- [ ] Profiles persist across Unraid system reboots.
+- [ ] Starting the VM and shutting down the VM are the only interventions necessary once setup.

@@ -1,0 +1,51 @@
+# Git ignore file for GPU Switch Manager
+
+# Package files
+*.txz
+*.tar.gz
+*.zip
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Build files
+build/
+dist/
+node_modules/
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Session files
+.session/
+*.session
+
+# Claude Code files
+.claude/
+
+# Test results
+test-results/
+coverage/
+
+# Backup files
+*.bak
+*.backup
+
+# Environment files
+.env
+.env.local
