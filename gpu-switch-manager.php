@@ -6,7 +6,7 @@
 
 // Plugin information
 $plugin_name = 'GPU Switch Manager';
-$plugin_version = '1.0.0';
+$plugin_version = '2026.05.05';
 $plugin_author = 'thewolfman56';
 $plugin_url = 'https://github.com/thewolfman56/unraid-gpu-switch-manager';
 

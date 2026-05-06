@@ -56,7 +56,7 @@ require_once('/usr/local/emhttp/web/include/header.php');
                 <div class="status-info">
                     <div class="status-item">
                         <span class="label">Version:</span>
-                        <span class="value">1.0.0</span>
+                        <span class="value">2026.05.05</span>
                     </div>
                     <div class="status-item">
                         <span class="label">Author:</span>

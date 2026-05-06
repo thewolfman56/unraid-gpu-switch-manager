@@ -28,10 +28,10 @@ GPU Switch Manager provides a centralized interface to toggle GPU drivers and as
 
 ### Method 2: Manual Installation (Recommended for Testing)
 
-1. Download the plugin package: `gpu-switch-manager-1.0.0.txz`
+1. Download the plugin package: `gpu-switch-manager-2026.05.05.txz`
 2. Upload to your Unraid server via SCP:
    ```bash
-   scp gpu-switch-manager-1.0.0.txz root@[server-ip]:/tmp/
+   scp gpu-switch-manager-2026.05.05.txz root@[server-ip]:/tmp/
    ```
 3. SSH into your Unraid server:
    ```bash
@@ -40,7 +40,7 @@ GPU Switch Manager provides a centralized interface to toggle GPU drivers and as
 4. Extract and install:
    ```bash
    cd /tmp
-   tar -xzf gpu-switch-manager-1.0.0.txz
+   tar -xzf gpu-switch-manager-2026.05.05.txz
    cd gpu-switch-manager
    chmod +x install.sh
    ./install.sh
@@ -255,10 +255,10 @@ git clone https://github.com/thewolfman56/unraid-gpu-switch-manager.git
 cd unraid-gpu-switch-manager
 
 # Create package
-tar -czf gpu-switch-manager-1.0.0.txz plugin.plg install.sh remove.sh gpu-switch-manager.php assets/ include/ scripts/ web/ settings/ event/ javascript/ styles/ templates/ gpu.switch.manager.cfg profiles.json state.json README.md SECURITY-HARDENING-SUMMARY.md SECURITY-TEST-REPORT.md
+tar -czf gpu-switch-manager-2026.05.05.txz gpu-switch-manager.plg install.sh remove.sh gpu-switch-manager.php assets/ include/ scripts/ web/ settings/ event/ javascript/ styles/ templates/ gpu.switch.manager.cfg profiles.json state.json README.md SECURITY-HARDENING-SUMMARY.md SECURITY-TEST-REPORT.md
 
 # Calculate MD5
-md5sum gpu-switch-manager-1.0.0.txz
+md5sum gpu-switch-manager-2026.05.05.txz
 ```
 
 ### Contributing
@@ -281,7 +281,7 @@ This plugin is provided as-is for use with Unraid systems. Please refer to the i
 
 ## Changelog
 
-### Version 1.0.0
+### Version 2026.05.05
 - Initial release
 - Complete plugin foundation with all phases (0-6)
 - Unraid Settings page integration

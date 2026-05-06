@@ -28,12 +28,12 @@ git push -u origin main
 
 1. Go to your repository on GitHub
 2. Click "Releases" → "Create a new release"
-3. Tag version: `v1.0.0`
-4. Release title: `GPU Switch Manager v1.0.0`
+3. Tag version: `2026.05.05`
+4. Release title: `GPU Switch Manager 2026.05.05`
 5. Description:
 
 ```
-## GPU Switch Manager v1.0.0
+## GPU Switch Manager 2026.05.05
 
 ### Features
 - Automated VFIO binding/unbinding for GPU passthrough
@@ -65,7 +65,7 @@ git push -u origin main
 
 6. **Attach the plugin package:**
    - Click "Attach binaries"
-   - Select `archives/gpu-switch-manager-1.0.0.txz`
+   - Select `archives/gpu-switch-manager-2026.05.05.txz`
    - Upload the file
 
 7. Click "Publish release"
@@ -80,10 +80,10 @@ git push -u origin main
 gh auth login
 
 # Create release
-gh release create v1.0.0 \
-  --title "GPU Switch Manager v1.0.0" \
+gh release create 2026.05.05 \
+  --title "GPU Switch Manager 2026.05.05" \
   --notes "See README.md for installation instructions" \
-  archives/gpu-switch-manager-1.0.0.txz
+  archives/gpu-switch-manager-2026.05.05.txz
 ```
 
 ## Step 4: Test Plugin Installation
@@ -183,4 +183,4 @@ After successful installation:
 
 **Repository URL:** https://github.com/thewolfman56/unraid-gpu-switch-manager
 **Plugin URL:** https://github.com/thewolfman56/unraid-gpu-switch-manager/raw/main/gpu-switch-manager.plg
-**Release URL:** https://github.com/thewolfman56/unraid-gpu-switch-manager/releases/tag/v1.0.0
+**Release URL:** https://github.com/thewolfman56/unraid-gpu-switch-manager/releases/tag/2026.05.05

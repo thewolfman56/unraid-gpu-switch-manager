@@ -15,7 +15,7 @@ NC='\033[0m' # No Color
 
 # Plugin information
 PLUGIN_NAME="GPU Switch Manager"
-PLUGIN_VERSION="1.0.0"
+PLUGIN_VERSION="2026.05.05"
 PLUGIN_DIR="gpu.switch.manager"
 CONFIG_DIR="/boot/config/plugins/$PLUGIN_DIR"
 RUNTIME_DIR="/usr/local/emhttp/plugins/$PLUGIN_DIR"
