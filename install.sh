@@ -156,21 +156,35 @@ copy_plugin_files() {
 
     # Copy event handlers
     if [[ -d "$script_dir/event" ]]; then
-        cp -r "$script_dir/event/"* "$RUNTIME_DIR/event/"
-        print_message "$GREEN" "Copied event handlers"
+        if [[ -n $(ls -A "$script_dir/event" 2>/dev/null) ]]; then
+            cp -r "$script_dir/event/"* "$RUNTIME_DIR/event/"
+            print_message "$GREEN" "Copied event handlers"
+        else
+            print_message "$YELLOW" "Event directory is empty, skipping"
+        fi
+    else
+        print_message "$YELLOW" "No event directory found, skipping"
     fi
 
     # Copy web interface files
     if [[ -d "$script_dir/web" ]]; then
-        cp -r "$script_dir/web/"* /usr/local/emhttp/webplugins/gpu-switch-manager/
-        print_message "$GREEN" "Copied web interface files"
+        if [[ -n $(ls -A "$script_dir/web" 2>/dev/null) ]]; then
+            cp -r "$script_dir/web/"* /usr/local/emhttp/webplugins/gpu-switch-manager/
+            print_message "$GREEN" "Copied web interface files"
+        else
+            print_message "$YELLOW" "Web directory is empty, skipping"
+        fi
     fi
 
     # Copy assets
     if [[ -d "$script_dir/assets" ]]; then
-        cp -r "$script_dir/assets/"* "$RUNTIME_DIR/assets/"
-        cp -r "$script_dir/assets/"* /usr/local/emhttp/webplugins/gpu-switch-manager/assets/
-        print_message "$GREEN" "Copied assets"
+        if [[ -n $(ls -A "$script_dir/assets" 2>/dev/null) ]]; then
+            cp -r "$script_dir/assets/"* "$RUNTIME_DIR/assets/"
+            cp -r "$script_dir/assets/"* /usr/local/emhttp/webplugins/gpu-switch-manager/assets/ 2>/dev/null || true
+            print_message "$GREEN" "Copied assets"
+        else
+            print_message "$YELLOW" "Assets directory is empty, skipping"
+        fi
     fi
 
     # Copy settings page
