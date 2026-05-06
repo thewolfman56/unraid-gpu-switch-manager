@@ -1,27 +1,117 @@
-<!DOCTYPE PLUGIN>
-<PLUGIN version="1.0">
-    <NAME>GPU Switch Manager</NAME>
-    <VERSION>2026.05.05</VERSION>
-    <TITLE>GPU Switch Manager</TITLE>
-    <AUTHOR>thewolfman56</AUTHOR>
-    <URL>https://github.com/thewolfman56/unraid-gpu-switch-manager</URL>
-    <DESCRIPTION>Automated GPU driver switching for VM passthrough and Docker. Toggle GPUs between host/Docker use and VM isolation without manual XML editing. Includes real-time GPU stats dashboard and persistent profile management.</DESCRIPTION>
-    <ICON>assets/icon.png</ICON>
-    <REQUIRES>Unraid 6.12.0+</REQUIRES>
-    <CHANGES>
-        ###2026.05.05
-        - Initial release
-        - Complete plugin foundation with all phases (0-6)
-        - Unraid Settings page integration
-        - Web interface with GPU management
-        - Profile management system
-        - Event-driven GPU switching
-        - Docker and VM service coordination
-        - Security hardening (100% test pass rate)
-        - Comprehensive documentation
-    </CHANGES>
-    <FILE>
-        <URL>https://github.com/thewolfman56/unraid-gpu-switch-manager/releases/download/2026.05.05/gpu-switch-manager-2026.05.05.txz</URL>
-        <MD5>5c30e0e6e6bde6cd6ed9bc76a7b53b72</MD5>
-    </FILE>
+<?xml version='1.0' standalone='yes'?>
+<!DOCTYPE PLUGIN [
+  <!ENTITY name      "gpu-switch-manager">
+  <!ENTITY author    "thewolfman56">
+  <!ENTITY version   "2026.05.06">
+  <!ENTITY gitURL    "https://github.com/&author;/unraid-gpu-switch-manager/releases/download">
+  <!ENTITY pluginURL "https://raw.githubusercontent.com/&author;/unraid-gpu-switch-manager/master/&name;.plg">
+  <!ENTITY md5       "5c30e0e6e6bde6cd6ed9bc76a7b53b72">
+  <!ENTITY plugin    "/boot/config/plugins/&name;">
+  <!ENTITY emhttp    "/usr/local/emhttp/plugins/&name;">
+]>
+
+<PLUGIN name="&name;" author="&author;" version="&version;" pluginURL="&pluginURL;" min="6.12.0">
+
+<CHANGES>
+
+###2026.05.06
+- Fixed plugin installation structure
+- Updated to proper unRAID plugin format
+- Corrected MD5 hash verification
+
+###2026.05.05
+- Initial release
+- Complete plugin foundation with all phases (0-6)
+- Unraid Settings page integration
+- Web interface with GPU management
+- Profile management system
+- Event-driven GPU switching
+- Docker and VM service coordination
+- Security hardening (100% test pass rate)
+- Comprehensive documentation
+
+</CHANGES>
+
+<FILE Run="/bin/bash">
+<INLINE>
+rm -f $(ls /boot/config/plugins/&name;/gpu-switch-manager*.txz 2>/dev/null|grep -v '&version;')
+</INLINE>
+</FILE>
+
+<FILE Name="/boot/config/plugins/&name;/gpu-switch-manager-&version;.txz" Run="upgradepkg --install-new">
+<URL>&gitURL;/&version;/gpu-switch-manager-&version;.txz</URL>
+<MD5>&md5;</MD5>
+</FILE>
+
+<FILE Name="&emhttp;/README.md">
+<INLINE>
+**GPU Switch Manager**
+
+This plugin provides automated GPU driver switching for VM passthrough and Docker containers.
+Toggle GPUs between host/Docker use and VM isolation without manual XML editing.
+
+Features:
+- Real-time GPU stats dashboard
+- Persistent profile management
+- Event-driven GPU switching
+- Docker and VM service coordination
+- Security-hardened implementation
+
+For more information, visit: https://github.com/thewolfman56/unraid-gpu-switch-manager
+</INLINE>
+</FILE>
+
+<FILE Run="/bin/bash">
+<INLINE>
+
+echo "-----------------------------------------------"
+echo "----Installation of GPU Switch Manager-------"
+echo "-----------------------------------------------"
+
+# Create necessary directories
+mkdir -p /boot/config/plugins/&name;
+mkdir -p /usr/local/emhttp/plugins/&name;
+
+# Set proper permissions
+chmod -R 755 /usr/local/emhttp/plugins/&name;
+chmod -R 755 /boot/config/plugins/&name;
+
+echo
+echo "----Installation of GPU Switch Manager complete-----"
+echo "-----------------------------------------------"
+echo
+echo "Access the plugin from:"
+echo "Settings -> GPU Switch Manager"
+echo "-----------------------------------------------"
+echo
+
+</INLINE>
+</FILE>
+
+<FILE Run="/bin/bash" Method="remove">
+<INLINE>
+
+echo "-----------------------------------------------"
+echo "----------Uninstalling GPU Switch Manager-------"
+echo "-----------------------------------------------"
+
+# Stop any running services
+if [ -f /usr/local/emhttp/plugins/&name;/event/unregister_event_handlers.sh ]; then
+  /usr/local/emhttp/plugins/&name;/event/unregister_event_handlers.sh
+fi
+
+# Remove plugin related files
+removepkg gpu-switch-manager-&version;
+rm -rf /usr/local/emhttp/plugins/&name;
+rm -rf &plugin;
+
+echo
+echo "-----------------------------------------------"
+echo "---Uninstallation of GPU Switch Manager complete!---"
+echo "-----------------------------------------------"
+echo
+
+</INLINE>
+</FILE>
+
 </PLUGIN>
