@@ -16,11 +16,11 @@ NC='\033[0m' # No Color
 # Plugin information
 PLUGIN_NAME="GPU Switch Manager"
 PLUGIN_VERSION="2026.05.05"
-PLUGIN_DIR="gpu.switch.manager"
+PLUGIN_DIR="gpu-switch-manager"
 CONFIG_DIR="/boot/config/plugins/$PLUGIN_DIR"
 RUNTIME_DIR="/usr/local/emhttp/plugins/$PLUGIN_DIR"
-LOG_FILE="/var/log/gpu.switch.manager.log"
-BACKUP_DIR="/tmp/gpu.switch.manager.backup"
+LOG_FILE="/var/log/gpu-switch-manager.log"
+BACKUP_DIR="/tmp/gpu-switch-manager.backup"
 
 # Function to print colored messages
 print_message() {
