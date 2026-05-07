@@ -189,7 +189,8 @@ copy_plugin_files() {
 
     # Copy settings page
     if [[ -f "$script_dir/settings/gpu-switch-manager.php" ]]; then
-        cp "$script_dir/settings/gpu-switch-manager.php" /usr/local/emhttp/websettings/gpu-switch-manager.php
+        mkdir -p /usr/local/emhttp/websettings/gpu-switch-manager
+        cp "$script_dir/settings/gpu-switch-manager.php" /usr/local/emhttp/websettings/gpu-switch-manager/gpu-switch-manager.php
         print_message "$GREEN" "Copied settings page"
     fi
 
