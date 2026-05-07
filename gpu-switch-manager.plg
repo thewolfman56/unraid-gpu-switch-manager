@@ -2,17 +2,26 @@
 <!DOCTYPE PLUGIN [
   <!ENTITY name      "gpu-switch-manager">
   <!ENTITY author    "thewolfman56">
-  <!ENTITY version   "2026.05.0602">
+  <!ENTITY version   "2026.05.07">
   <!ENTITY gitURL    "https://github.com/&author;/unraid-gpu-switch-manager/releases/download">
   <!ENTITY pluginURL "https://raw.githubusercontent.com/&author;/unraid-gpu-switch-manager/master/&name;.plg">
-  <!ENTITY md5       "5c30e0e6e6bde6cd6ed9bc76a7b53b72">
+  <!ENTITY md5       "cfeecf41c703ed7bc853e63650c7db06">
   <!ENTITY plugin    "/boot/config/plugins/&name;">
   <!ENTITY emhttp    "/usr/local/emhttp/plugins/&name;">
 ]>
 
-<PLUGIN name="&name;" author="&author;" version="&version;" pluginURL="&pluginURL;" min="6.12.0" launch="gpu-switch-manager" icon="&emhttp;/assets/icon.png">
+<PLUGIN name="&name;" author="&author;" version="&version;" pluginURL="&pluginURL;" min="6.12.0" launch="Settings/gpu-switch-manager" icon="&emhttp;/assets/icon.png">
 
 <CHANGES>
+
+###2026.05.07
+- Fixed directory structure to use consistent gpu-switch-manager naming
+- Fixed launch path to Settings/gpu-switch-manager for proper settings access
+- Fixed icon path to use custom icon.png from assets directory
+- Fixed installation script to create single plugin directory
+- Updated config file naming to match plugin directory
+- Fixed 404 error when accessing settings page
+- Fixed icon display in Plugins page and Settings page
 
 ###2026.05.0602
 - Fixed launch path to point to correct settings PHP file
