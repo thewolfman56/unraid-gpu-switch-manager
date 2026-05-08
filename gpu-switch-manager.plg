@@ -2,7 +2,7 @@
 <!DOCTYPE PLUGIN [
   <!ENTITY name      "gpu-switch-manager">
   <!ENTITY author    "thewolfman56">
-  <!ENTITY version   "2026.05.07">
+  <!ENTITY version   "2026.05.08">
   <!ENTITY gitURL    "https://github.com/&author;/unraid-gpu-switch-manager/releases/download">
   <!ENTITY pluginURL "https://raw.githubusercontent.com/&author;/unraid-gpu-switch-manager/master/&name;.plg">
   <!ENTITY md5       "b08dc4933bac8db5190cdb08c7650505">
@@ -13,6 +13,13 @@
 <PLUGIN name="&name;" author="&author;" version="&version;" pluginURL="&pluginURL;" min="6.12.0" launch="Settings/gpu-switch-manager" icon="&emhttp;/assets/icon.png">
 
 <CHANGES>
+
+###2026.05.08
+- Updated version for release with corrected package structure
+- Package now properly extracts to usr/local/emhttp/ directories
+- All plugin files now correctly installed during package extraction
+- Settings page properly accessible via /Settings/gpu-switch-manager
+- Icon properly displayed in Plugins page and Settings page
 
 ###2026.05.07
 - Fixed package structure to use proper unRAID directory layout
