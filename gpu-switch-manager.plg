@@ -5,7 +5,7 @@
   <!ENTITY version   "2026.05.07">
   <!ENTITY gitURL    "https://github.com/&author;/unraid-gpu-switch-manager/releases/download">
   <!ENTITY pluginURL "https://raw.githubusercontent.com/&author;/unraid-gpu-switch-manager/master/&name;.plg">
-  <!ENTITY md5       "4addb2e7dbc5b516b368a8bc892259bd">
+  <!ENTITY md5       "b08dc4933bac8db5190cdb08c7650505">
   <!ENTITY plugin    "/boot/config/plugins/&name;">
   <!ENTITY emhttp    "/usr/local/emhttp/plugins/&name;">
 ]>
@@ -15,13 +15,13 @@
 <CHANGES>
 
 ###2026.05.07
-- Fixed directory structure to use consistent gpu-switch-manager naming
-- Fixed launch path to Settings/gpu-switch-manager for proper settings access
+- Fixed package structure to use proper unRAID directory layout
+- Package now contains files in usr/local/emhttp/ structure
 - Fixed icon path to use custom icon.png from assets directory
-- Fixed installation script to create single plugin directory
-- Updated config file naming to match plugin directory
-- Fixed 404 error when accessing settings page
-- Fixed icon display in Plugins page and Settings page
+- Fixed settings page to be in correct websettings directory
+- Fixed launch path to Settings/gpu-switch-manager for proper settings access
+- Removed dependency on install.sh script for file placement
+- Updated MD5 hash to match corrected package structure
 
 ###2026.05.0602
 - Fixed launch path to point to correct settings PHP file
@@ -89,13 +89,13 @@ echo "-----------------------------------------------"
 echo "----Installation of GPU Switch Manager-------"
 echo "-----------------------------------------------"
 
-# Create necessary directories
-mkdir -p /boot/config/plugins/&name;
-mkdir -p /usr/local/emhttp/plugins/&name;
-
 # Set proper permissions
 chmod -R 755 /usr/local/emhttp/plugins/&name;
-chmod -R 755 /boot/config/plugins/&name;
+chmod -R 755 /usr/local/emhttp/websettings/&name;
+
+# Make scripts executable
+find /usr/local/emhttp/plugins/&name;/scripts -type f -name "*.sh" -exec chmod 755 {} \; 2>/dev/null || true
+find /usr/local/emhttp/plugins/&name;/event -type f -exec chmod 755 {} \; 2>/dev/null || true
 
 echo
 echo "----Installation of GPU Switch Manager complete-----"
@@ -122,8 +122,8 @@ if [ -f /usr/local/emhttp/plugins/&name;/event/unregister_event_handlers.sh ]; t
 fi
 
 # Remove plugin related files
-removepkg gpu-switch-manager-&version;
 rm -rf /usr/local/emhttp/plugins/&name;
+rm -rf /usr/local/emhttp/websettings/&name;
 rm -rf &plugin;
 
 echo
