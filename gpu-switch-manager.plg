@@ -2,17 +2,126 @@
 <!DOCTYPE PLUGIN [
   <!ENTITY name      "gpu-switch-manager">
   <!ENTITY author    "thewolfman56">
-  <!ENTITY version   "2026.05.08">
+  <!ENTITY version   "2026.05.10">
   <!ENTITY gitURL    "https://github.com/&author;/unraid-gpu-switch-manager/releases/download">
   <!ENTITY pluginURL "https://raw.githubusercontent.com/&author;/unraid-gpu-switch-manager/master/&name;.plg">
-  <!ENTITY md5       "b08dc4933bac8db5190cdb08c7650505">
+  <!ENTITY md5       "c9f2777f847e52456ecafd1289283476">
   <!ENTITY plugin    "/boot/config/plugins/&name;">
   <!ENTITY emhttp    "/usr/local/emhttp/plugins/&name;">
 ]>
 
-<PLUGIN name="&name;" author="&author;" version="&version;" pluginURL="&pluginURL;" min="6.12.0" launch="Settings/gpu-switch-manager" icon="&emhttp;/assets/icon.png">
+<PLUGIN name="&name;" author="&author;" version="&version;" pluginURL="&pluginURL;" min="6.12.0" launch="Settings/GPUSwitchManager" icon="icon-hardware">
 
 <CHANGES>
+
+###2026.05.10
+- Fixed package structure by removing incorrect gpu-switch-manager.php from websettings directory
+- Websettings directory now only contains GPUSwitchManager.page file
+- Updated MD5 hash to match corrected package structure
+
+###2026.05.09
+- Fixed blank settings page issue by ensuring GPUSwitchManager.page is in correct websettings directory
+- Updated version format to YYYY.MM.DD (no daily suffix for first release)
+- Changed Plugin Enabled default to "No" in General Settings
+- Added Primary GPU dropdown selection in Safety Settings
+- Redesigned profile creation workflow with VM selection as profile name
+- Implemented mutual exclusion for VM selection in profiles
+- Added GPU Containers and CPU Containers separation in profile creation
+- Implemented Other VMs management with shutdown/restart lists and priority
+- Added Profiles Enabled section for event monitoring
+- Created get_docker_containers.php script for Docker container detection
+- Created toggle_profile_enabled.php script for profile enablement functionality
+- Updated default.cfg with new configuration options
+- Fixed blank settings page issue by removing all colons before form elements
+- Changed icon to built-in "icon-hardware" for proper display
+
+###2026.05.0815
+- Improved profile management with intuitive modal interface
+- Added comprehensive profile creation/editing form with all configuration options
+- Implemented profile description, GPU selection, and binding mode configuration
+- Added Docker containers and VM management settings per profile
+- Created update_profile.php script for editing existing profiles
+- Added apply_profile.php script for one-click profile application
+- Enhanced profile display with descriptions and Apply button
+- Added profile modal with form validation and user-friendly interface
+- Profiles now support full configuration: GPU, mode, containers, VM, notes
+
+###2026.05.0814
+- Added comprehensive GPU Profiles management section to settings page
+- Implemented profile management (create, edit, delete profiles) with AJAX functionality
+- Added real-time GPU statistics display with auto-refresh option
+- Implemented GPU binding controls with target GPU selection and binding mode options
+- Added Docker/VM integration settings including auto-start VM, target VM name, and protected containers
+- Created supporting PHP scripts for profile and GPU management operations
+- Added new configuration options for Docker integration and VM management
+- Enhanced settings page with interactive tables and dynamic content loading
+
+###2026.05.0813
+- Fixed "Open Settings" button link from /settings/gpu-switch-manager to /Settings/GPUSwitchManager
+- Corrected button routing in main gpu-switch-manager.php interface file
+- Button now correctly navigates to the proper settings page
+
+###2026.05.0812
+- Fixed GPU Dashboard link path from /gpu-switch-manager/ to /plugins/gpu-switch-manager/gpu-switch-manager.php
+- Resolved 404 error when accessing main GPU management interface
+- Link now correctly points to existing gpu-switch-manager.php file
+
+###2026.05.0811
+- Fixed layout issue with input fields appearing on same line as next labels
+- Added line breaks after input fields for proper spacing
+- Added GPU Profiles section with link to main dashboard
+- Improved form layout and readability
+
+###2026.05.0810
+- Added complete settings page with all configuration options
+- Includes General, Operation, Safety, and Dashboard settings
+- All form controls tested and working correctly
+- Configuration save and persistence verified
+
+###2026.05.0809
+- Added JavaScript to enable Apply button when form changes
+- Added full form submission handling with configuration save
+- Previous version had working dropdowns but greyed out Apply button
+
+###2026.05.0808
+- Removed markdown="1" attribute from form tag to fix PHP execution
+- Previous version showed raw PHP code instead of processed HTML
+- Testing if markdown attribute was interfering with PHP processing
+
+###2026.05.0807
+- Created form test without mk_option() function to isolate the issue
+- Using standard HTML option tags instead of mk_option()
+- Configuration parsing confirmed working in previous version
+
+###2026.05.0806
+- Added configuration parsing test to diagnose parse_plugin_cfg() function
+- Will display configuration values to verify if config loading works
+
+###2026.05.0805
+- Created simple PHP test to diagnose execution issues
+- Minimal PHP code to test if basic PHP execution works
+
+###2026.05.0804
+- Restored PHP code to .page file after successful structure test
+- Fixed default.cfg format to match unRAID standards
+- Settings page should now load with full functionality
+
+###2026.05.0803
+- Created minimal test .page file to diagnose PHP execution issues
+- Removed complex PHP code temporarily for testing
+- Icon file size issue identified (343KB - too large)
+
+###2026.05.0802
+- Added default.cfg file to provide default configuration values
+- Fixed PHP execution issues in settings page
+- Package now includes proper default configuration
+
+###2026.05.0801
+- Fixed plugin structure based on gpustat-unraid reference
+- Changed launch path to "Settings/GPUSwitchManager" to match .page file naming
+- Changed icon to built-in "icon-hardware" for proper display
+- Settings page will use .page file format instead of .php
+- Icon will be specified in .page file header for custom display
 
 ###2026.05.08
 - Updated version for release with corrected package structure

@@ -1,0 +1,943 @@
+Menu="Utilities"
+Icon="icon-hardware"
+Title="GPU Switch Manager"
+---
+
+<?php
+    // Parse plugin configuration
+    $cfg = parse_plugin_cfg("gpu-switch-manager", true);
+
+    // Handle form submission
+    if (count($_POST)) {
+        if ($_POST['#apply'] == "_(Apply)_") {
+            $new_cfg = array();
+            foreach ($_POST as $key => $val) {
+                if ($key[0] != "#") {
+                    $new_cfg[$key] = $val;
+                }
+            }
+
+            // Save configuration
+            $file = "/usr/local/emhttp/plugins/gpu-switch-manager/gpu-switch-manager.cfg";
+            $res = array();
+            foreach ($new_cfg as $key => $val) {
+                $res[] = "$key = \"$val\"";
+            }
+            file_put_contents($file, implode("\n", $res));
+
+            // Also save to flash
+            file_put_contents("/boot/config/plugins/gpu-switch-manager/gpu-switch-manager.cfg", implode("\n", $res));
+
+            // Reload configuration
+            $cfg = parse_plugin_cfg("gpu-switch-manager", true);
+            unset($_POST);
+        }
+    }
+?>
+
+<script>
+$(function() {
+    // Enable Apply button when form changes
+    $('form').on('change', 'select, input', function() {
+        $('#btnApply').prop('disabled', false);
+    });
+
+    // Profile Management
+    loadProfiles();
+    loadEnabledProfiles();
+    loadGPUsForProfile();
+    loadVMsForProfile();
+    loadDockerContainers();
+    loadPrimaryGPUs();
+
+    $('#btnCreateProfile').on('click', function() {
+        openProfileModal();
+    });
+
+    $('#btnRefreshProfiles').on('click', function() {
+        loadProfiles();
+        loadEnabledProfiles();
+    });
+
+    $('#btnCancelProfile').on('click', function() {
+        closeProfileModal();
+    });
+
+    $('#profileForm').on('submit', function(e) {
+        e.preventDefault();
+        saveProfile();
+    });
+
+    // GPU Statistics
+    loadGPUStats();
+
+    $('#btnRefreshStats').on('click', function() {
+        loadGPUStats();
+    });
+
+    // Auto-refresh statistics
+    var statsInterval;
+    $('#autoRefreshStats').on('change', function() {
+        if ($(this).is(':checked')) {
+            statsInterval = setInterval(loadGPUStats, 5000);
+        } else {
+            clearInterval(statsInterval);
+        }
+    });
+
+    // GPU Binding
+    loadGPUBinding();
+
+    $('#btnApplyBinding').on('click', function() {
+        applyGPUBinding();
+    });
+
+    // Functions
+    function loadProfiles() {
+        $('#profile-list').html('<p><em>Loading profiles...</em></p>');
+
+        $.ajax({
+            url: '/plugins/gpu-switch-manager/scripts/get_profiles.php',
+            method: 'GET',
+            dataType: 'json',
+            success: function(data) {
+                if (data.profiles && Object.keys(data.profiles).length > 0) {
+                    var html = '<table style="width: 100%; border-collapse: collapse;">';
+                    html += '<tr style="background: #e0e0e0;"><th style="padding: 8px; text-align: left;">Profile Name</th><th style="padding: 8px; text-align: left;">GPU</th><th style="padding: 8px; text-align: left;">Status</th><th style="padding: 8px; text-align: left;">Actions</th></tr>';
+
+                    $.each(data.profiles, function(name, profile) {
+                        html += '<tr style="border-bottom: 1px solid #ddd;">';
+                        html += '<td style="padding: 8px;"><strong>' + name + '</strong>';
+                        if (profile.enabled) {
+                            html += ' <span style="color: green; font-size: 12px;">● Enabled</span>';
+                        }
+                        html += '<br><small style="color: #666;">';
+                        html += 'VM: ' + (profile.vm_name || 'N/A');
+                        if (profile.gpu_containers && profile.gpu_containers.length > 0) {
+                            html += ' | GPU Containers: ' + profile.gpu_containers.length;
+                        }
+                        if (profile.cpu_containers && profile.cpu_containers.length > 0) {
+                            html += ' | CPU Containers: ' + profile.cpu_containers.length;
+                        }
+                        html += '</small></td>';
+                        html += '<td style="padding: 8px;">' + (profile.gpu || 'N/A') + '</td>';
+                        html += '<td style="padding: 8px;">' + (profile.enabled ? 'Active' : 'Inactive') + '</td>';
+                        html += '<td style="padding: 8px;">';
+                        html += '<button type="button" class="button" onclick="editProfile(\'' + name + '\')">Edit</button> ';
+                        html += '<button type="button" class="button" onclick="applyProfile(\'' + name + '\')">Apply</button> ';
+                        html += '<button type="button" class="button" onclick="deleteProfile(\'' + name + '\')">Delete</button>';
+                        html += '</td>';
+                        html += '</tr>';
+                    });
+
+                    html += '</table>';
+                    $('#profile-list').html(html);
+                } else {
+                    $('#profile-list').html('<p><em>No profiles found. Create your first profile to get started.</em></p>');
+                }
+            },
+            error: function() {
+                $('#profile-list').html('<p><em>Error loading profiles. Please try again.</em></p>');
+            }
+        });
+    }
+
+    function createProfile() {
+        openProfileModal();
+    }
+
+    function editProfile(name) {
+        // Load profile data and populate modal
+        $.ajax({
+            url: '/plugins/gpu-switch-manager/scripts/get_profiles.php',
+            method: 'GET',
+            dataType: 'json',
+            success: function(data) {
+                if (data.profiles && data.profiles[name]) {
+                    var profile = data.profiles[name];
+                    $('#editProfileName').val(name);
+                    $('#profileVM').val(profile.vm_name || '');
+                    $('#profileGPU').val(profile.gpu || '');
+
+                    // Clear all checkboxes first
+                    $('#gpuContainersList input[type="checkbox"]').prop('checked', false);
+                    $('#cpuContainersList input[type="checkbox"]').prop('checked', false);
+                    $('#otherVMsShutdownList input[type="checkbox"]').prop('checked', false);
+                    $('#otherVMsRestartList input[type="checkbox"]').prop('checked', false);
+
+                    // Set GPU containers
+                    if (profile.gpu_containers && Array.isArray(profile.gpu_containers)) {
+                        $.each(profile.gpu_containers, function(index, containerName) {
+                            $('#gpuContainersList input[type="checkbox"][value="' + containerName + '"]').prop('checked', true);
+                        });
+                    }
+
+                    // Set CPU containers
+                    if (profile.cpu_containers && Array.isArray(profile.cpu_containers)) {
+                        $.each(profile.cpu_containers, function(index, containerName) {
+                            $('#cpuContainersList input[type="checkbox"][value="' + containerName + '"]').prop('checked', true);
+                        });
+                    }
+
+                    // Set other VMs to shutdown
+                    if (profile.other_vms_shutdown && Array.isArray(profile.other_vms_shutdown)) {
+                        $.each(profile.other_vms_shutdown, function(index, vmName) {
+                            $('#otherVMsShutdownList input[type="checkbox"][value="' + vmName + '"]').prop('checked', true);
+                        });
+                    }
+
+                    // Set other VMs to restart with priority
+                    if (profile.other_vms_restart && Array.isArray(profile.other_vms_restart)) {
+                        $.each(profile.other_vms_restart, function(index, vmConfig) {
+                            var vmName = vmConfig.name;
+                            var priority = vmConfig.priority || 1;
+                            $('#otherVMsRestartList input[type="checkbox"][value="' + vmName + '"]').prop('checked', true);
+                            $('#otherVMsRestartList input[type="checkbox"][value="' + vmName + '"]').each(function() {
+                                var checkboxId = $(this).attr('id');
+                                if (checkboxId) {
+                                    $('#restart_priority_' + checkboxId.replace('restart_vm_', '')).val(priority);
+                                }
+                            });
+                        });
+                    }
+
+                    $('#profileModalTitle').text('Edit Profile: ' + name);
+                    $('#profileModal').show();
+                } else {
+                    alert('Profile not found: ' + name);
+                }
+            },
+            error: function() {
+                alert('Error loading profile data');
+            }
+        });
+    }
+
+    function openProfileModal() {
+        $('#editProfileName').val('');
+        $('#profileVM').val('');
+        $('#profileGPU').val('');
+
+        // Clear all checkboxes
+        $('#gpuContainersList input[type="checkbox"]').prop('checked', false);
+        $('#cpuContainersList input[type="checkbox"]').prop('checked', false);
+        $('#otherVMsShutdownList input[type="checkbox"]').prop('checked', false);
+        $('#otherVMsRestartList input[type="checkbox"]').prop('checked', false);
+
+        // Reset priority dropdowns
+        $('#otherVMsRestartList select').val('1');
+
+        $('#profileModalTitle').text('Create New Profile');
+        $('#profileModal').show();
+    }
+
+    function closeProfileModal() {
+        $('#profileModal').hide();
+    }
+
+    function saveProfile() {
+        var editName = $('#editProfileName').val();
+        var vmName = $('#profileVM').val();
+        var isEdit = editName.length > 0;
+
+        if (!vmName) {
+            alert('Please select a VM for this profile');
+            return;
+        }
+
+        var gpuId = $('#profileGPU').val();
+        if (!gpuId) {
+            alert('Please select a GPU to pass through');
+            return;
+        }
+
+        // Collect GPU containers
+        var gpuContainers = [];
+        $('#gpuContainersList input[type="checkbox"]:checked').each(function() {
+            gpuContainers.push($(this).val());
+        });
+
+        // Collect CPU containers
+        var cpuContainers = [];
+        $('#cpuContainersList input[type="checkbox"]:checked').each(function() {
+            cpuContainers.push($(this).val());
+        });
+
+        // Check for overlap between GPU and CPU containers
+        var overlap = gpuContainers.filter(function(container) {
+            return cpuContainers.indexOf(container) !== -1;
+        });
+        if (overlap.length > 0) {
+            alert('The following containers cannot be in both GPU and CPU lists: ' + overlap.join(', '));
+            return;
+        }
+
+        // Collect other VMs to shutdown
+        var otherVMsShutdown = [];
+        $('#otherVMsShutdownList input[type="checkbox"]:checked').each(function() {
+            otherVMsShutdown.push($(this).val());
+        });
+
+        // Collect other VMs to restart with priority
+        var otherVMsRestart = [];
+        $('#otherVMsRestartList input[type="checkbox"]:checked').each(function() {
+            var vmName = $(this).val();
+            var priority = $('#restart_priority_' + $(this).attr('id').replace('restart_vm_', '')).val();
+            otherVMsRestart.push({
+                name: vmName,
+                priority: parseInt(priority)
+            });
+        });
+
+        // Sort by priority
+        otherVMsRestart.sort(function(a, b) {
+            return a.priority - b.priority;
+        });
+
+        var profileData = {
+            name: vmName, // Use VM name as profile name
+            vm_name: vmName,
+            gpu: gpuId,
+            gpu_containers: gpuContainers,
+            cpu_containers: cpuContainers,
+            other_vms_shutdown: otherVMsShutdown,
+            other_vms_restart: otherVMsRestart,
+            enabled: false,
+            created: isEdit ? undefined : new Date().toISOString(),
+            updated: new Date().toISOString()
+        };
+
+        $.ajax({
+            url: '/plugins/gpu-switch-manager/scripts/' + (isEdit ? 'update_profile.php' : 'create_profile.php'),
+            method: 'POST',
+            data: isEdit ? { old_name: editName, profile_data: JSON.stringify(profileData) } : { profile_data: JSON.stringify(profileData) },
+            success: function() {
+                closeProfileModal();
+                loadProfiles();
+                loadEnabledProfiles();
+                loadVMsForProfile(); // Refresh VM list to exclude newly used VM
+                alert(isEdit ? 'Profile updated successfully!' : 'Profile created successfully!');
+            },
+            error: function() {
+                alert('Error saving profile. Please try again.');
+            }
+        });
+    }
+
+    function loadGPUsForProfile() {
+        $.ajax({
+            url: '/plugins/gpu-switch-manager/scripts/get_gpu_binding.php',
+            method: 'GET',
+            dataType: 'json',
+            success: function(data) {
+                if (data.gpus && data.gpus.length > 0) {
+                    $('#profileGPU').find('option').remove().end().append('<option value="">Select GPU...</option>');
+                    $.each(data.gpus, function(index, gpu) {
+                        $('#profileGPU').append('<option value="' + gpu.id + '">' + gpu.name + '</option>');
+                    });
+                } else {
+                    $('#profileGPU').find('option').remove().end().append('<option value="">No GPUs detected</option>');
+                }
+            },
+            error: function() {
+                $('#profileGPU').find('option').remove().end().append('<option value="">Error loading GPUs</option>');
+            }
+        });
+    }
+
+    function loadPrimaryGPUs() {
+        $.ajax({
+            url: '/plugins/gpu-switch-manager/scripts/get_gpu_binding.php',
+            method: 'GET',
+            dataType: 'json',
+            success: function(data) {
+                if (data.gpus && data.gpus.length > 0) {
+                    $('#PRIMARY_GPU').find('option').remove().end().append('<option value="">Select GPU...</option>');
+                    $.each(data.gpus, function(index, gpu) {
+                        $('#PRIMARY_GPU').append('<option value="' + gpu.id + '">' + gpu.name + '</option>');
+                    });
+                } else {
+                    $('#PRIMARY_GPU').find('option').remove().end().append('<option value="">No GPUs detected</option>');
+                }
+            },
+            error: function() {
+                $('#PRIMARY_GPU').find('option').remove().end().append('<option value="">Error loading GPUs</option>');
+            }
+        });
+    }
+
+    function loadVMsForProfile() {
+        $.ajax({
+            url: '/plugins/gpu-switch-manager/scripts/get_vms.php',
+            method: 'GET',
+            dataType: 'json',
+            success: function(data) {
+                if (data.vms && data.vms.length > 0) {
+                    // Load existing profiles to exclude used VMs
+                    $.ajax({
+                        url: '/plugins/gpu-switch-manager/scripts/get_profiles.php',
+                        method: 'GET',
+                        dataType: 'json',
+                        success: function(profilesData) {
+                            var usedVMs = [];
+                            if (profilesData.profiles) {
+                                $.each(profilesData.profiles, function(profileName, profile) {
+                                    if (profile.vm_name) {
+                                        usedVMs.push(profile.vm_name);
+                                    }
+                                });
+                            }
+
+                            $('#profileVM').find('option').remove().end().append('<option value="">Select VM...</option>');
+                            $.each(data.vms, function(index, vm) {
+                                if (usedVMs.indexOf(vm.name) === -1) {
+                                    $('#profileVM').append('<option value="' + vm.name + '">' + vm.name + '</option>');
+                                }
+                            });
+
+                            // Load other VMs for shutdown/restart lists
+                            loadOtherVMsLists(data.vms);
+                        },
+                        error: function() {
+                            // If profiles load fails, still show all VMs
+                            $('#profileVM').find('option').remove().end().append('<option value="">Select VM...</option>');
+                            $.each(data.vms, function(index, vm) {
+                                $('#profileVM').append('<option value="' + vm.name + '">' + vm.name + '</option>');
+                            });
+                            loadOtherVMsLists(data.vms);
+                        }
+                    });
+                } else {
+                    $('#profileVM').find('option').remove().end().append('<option value="">No VMs detected</option>');
+                }
+            },
+            error: function() {
+                $('#profileVM').find('option').remove().end().append('<option value="">Error loading VMs</option>');
+            }
+        });
+    }
+
+    function loadOtherVMsLists(allVMs) {
+        // Get currently selected VM to exclude from other VMs lists
+        var selectedVM = $('#profileVM').val();
+
+        // Other VMs to Shutdown
+        $('#otherVMsShutdownList').empty();
+        if (allVMs.length > 0) {
+            $.each(allVMs, function(index, vm) {
+                if (vm.name !== selectedVM) {
+                    $('#otherVMsShutdownList').append(
+                        '<div style="margin: 5px 0;">' +
+                        '<input type="checkbox" id="shutdown_vm_' + index + '" value="' + vm.name + '" style="margin-right: 8px;">' +
+                        '<label for="shutdown_vm_' + index + '">' + vm.name + '</label>' +
+                        '</div>'
+                    );
+                }
+            });
+        } else {
+            $('#otherVMsShutdownList').append('<p><em>No VMs available</em></p>');
+        }
+
+        // Other VMs to Restart with priority
+        $('#otherVMsRestartList').empty();
+        if (allVMs.length > 0) {
+            $.each(allVMs, function(index, vm) {
+                if (vm.name !== selectedVM) {
+                    $('#otherVMsRestartList').append(
+                        '<div style="margin: 5px 0;">' +
+                        '<input type="checkbox" id="restart_vm_' + index + '" value="' + vm.name + '" style="margin-right: 8px;">' +
+                        '<label for="restart_vm_' + index + '">' + vm.name + '</label>' +
+                        '<select id="restart_priority_' + index + '" style="margin-left: 10px; padding: 4px; border: 1px solid #ccc; border-radius: 4px;">' +
+                        '<option value="1">Priority 1</option>' +
+                        '<option value="2">Priority 2</option>' +
+                        '<option value="3">Priority 3</option>' +
+                        '<option value="4">Priority 4</option>' +
+                        '<option value="5">Priority 5</option>' +
+                        '</select>' +
+                        '</div>'
+                    );
+                }
+            });
+        } else {
+            $('#otherVMsRestartList').append('<p><em>No VMs available</em></p>');
+        }
+    }
+
+    function loadDockerContainers() {
+        $.ajax({
+            url: '/plugins/gpu-switch-manager/scripts/get_docker_containers.php',
+            method: 'GET',
+            dataType: 'json',
+            success: function(data) {
+                if (data.containers && data.containers.length > 0) {
+                    // GPU Containers
+                    $('#gpuContainersList').empty();
+                    $.each(data.containers, function(index, container) {
+                        $('#gpuContainersList').append(
+                            '<div style="margin: 5px 0;">' +
+                            '<input type="checkbox" id="gpu_container_' + index + '" value="' + container.name + '" style="margin-right: 8px;">' +
+                            '<label for="gpu_container_' + index + '">' + container.name + '</label>' +
+                            '</div>'
+                        );
+                    });
+
+                    // CPU Containers (same list, different selection)
+                    $('#cpuContainersList').empty();
+                    $.each(data.containers, function(index, container) {
+                        $('#cpuContainersList').append(
+                            '<div style="margin: 5px 0;">' +
+                            '<input type="checkbox" id="cpu_container_' + index + '" value="' + container.name + '" style="margin-right: 8px;">' +
+                            '<label for="cpu_container_' + index + '">' + container.name + '</label>' +
+                            '</div>'
+                        );
+                    });
+                } else {
+                    $('#gpuContainersList').append('<p><em>No Docker containers detected</em></p>');
+                    $('#cpuContainersList').append('<p><em>No Docker containers detected</em></p>');
+                }
+            },
+            error: function() {
+                $('#gpuContainersList').append('<p><em>Error loading Docker containers</em></p>');
+                $('#cpuContainersList').append('<p><em>Error loading Docker containers</em></p>');
+            }
+        });
+    }
+
+    function loadEnabledProfiles() {
+        $.ajax({
+            url: '/plugins/gpu-switch-manager/scripts/get_profiles.php',
+            method: 'GET',
+            dataType: 'json',
+            success: function(data) {
+                if (data.profiles && Object.keys(data.profiles).length > 0) {
+                    var html = '';
+                    $.each(data.profiles, function(name, profile) {
+                        var isEnabled = profile.enabled === true;
+                        html += '<div style="margin: 8px 0;">';
+                        html += '<input type="checkbox" id="enabled_profile_' + name + '" value="' + name + '" ' + (isEnabled ? 'checked' : '') + ' style="margin-right: 8px;" onchange="toggleProfileEnabled(\'' + name + '\')">';
+                        html += '<label for="enabled_profile_' + name + '"><strong>' + name + '</strong>';
+                        if (profile.vm_name) {
+                            html += ' (VM: ' + profile.vm_name + ')';
+                        }
+                        html += '</label>';
+                        html += '</div>';
+                    });
+                    $('#profiles-enabled-list').html(html);
+                } else {
+                    $('#profiles-enabled-list').html('<p><em>No profiles created yet</em></p>');
+                }
+            },
+            error: function() {
+                $('#profiles-enabled-list').html('<p><em>Error loading profiles</em></p>');
+            }
+        });
+    }
+
+    function toggleProfileEnabled(profileName) {
+        var isEnabled = $('#enabled_profile_' + profileName).is(':checked');
+        $.ajax({
+            url: '/plugins/gpu-switch-manager/scripts/toggle_profile_enabled.php',
+            method: 'POST',
+            data: { name: profileName, enabled: isEnabled },
+            success: function() {
+                // Profile enabled status updated
+            },
+            error: function() {
+                alert('Error updating profile enabled status');
+                // Revert checkbox on error
+                $('#enabled_profile_' + profileName).prop('checked', !isEnabled);
+            }
+        });
+    }
+
+    function deleteProfile(name) {
+        if (confirm('Are you sure you want to delete profile: ' + name + '?')) {
+            $.ajax({
+                url: '/plugins/gpu-switch-manager/scripts/delete_profile.php',
+                method: 'POST',
+                data: { name: name },
+                success: function() {
+                    loadProfiles();
+                    alert('Profile deleted successfully!');
+                },
+                error: function() {
+                    alert('Error deleting profile. Please try again.');
+                }
+            });
+        }
+    }
+
+    function applyProfile(name) {
+        if (confirm('Are you sure you want to apply profile: ' + name + '? This will modify GPU bindings and may stop/start containers and VMs.')) {
+            $.ajax({
+                url: '/plugins/gpu-switch-manager/scripts/apply_profile.php',
+                method: 'POST',
+                data: { name: name },
+                success: function() {
+                    alert('Profile applied successfully! GPU binding changes have been queued.');
+                    loadGPUBinding();
+                    loadGPUStats();
+                },
+                error: function() {
+                    alert('Error applying profile. Please try again.');
+                }
+            });
+        }
+    }
+
+    function loadGPUStats() {
+        $('#gpu-stats').html('<p><em>Loading GPU statistics...</em></p>');
+
+        $.ajax({
+            url: '/plugins/gpu-switch-manager/scripts/get_gpu_stats.php',
+            method: 'GET',
+            dataType: 'json',
+            success: function(data) {
+                if (data.gpus && data.gpus.length > 0) {
+                    var html = '<table style="width: 100%; border-collapse: collapse;">';
+                    html += '<tr style="background: #e0e0e0;"><th style="padding: 8px; text-align: left;">GPU</th><th style="padding: 8px; text-align: left;">Temperature</th><th style="padding: 8px; text-align: left;">Utilization</th><th style="padding: 8px; text-align: left;">Memory</th><th style="padding: 8px; text-align: left;">Status</th></tr>';
+
+                    $.each(data.gpus, function(index, gpu) {
+                        html += '<tr style="border-bottom: 1px solid #ddd;">';
+                        html += '<td style="padding: 8px;">' + gpu.name + '</td>';
+                        html += '<td style="padding: 8px;">' + gpu.temperature + '°C</td>';
+                        html += '<td style="padding: 8px;">' + gpu.utilization + '%</td>';
+                        html += '<td style="padding: 8px;">' + gpu.memory_used + ' / ' + gpu.memory_total + ' MB</td>';
+                        html += '<td style="padding: 8px;">' + gpu.status + '</td>';
+                        html += '</tr>';
+                    });
+
+                    html += '</table>';
+                    $('#gpu-stats').html(html);
+                } else {
+                    $('#gpu-stats').html('<p><em>No GPUs detected or unable to retrieve statistics.</em></p>');
+                }
+            },
+            error: function() {
+                $('#gpu-stats').html('<p><em>Error loading GPU statistics. Please try again.</em></p>');
+            }
+        });
+    }
+
+    function loadGPUBinding() {
+        $('#gpu-binding').html('<p><em>Loading GPU binding information...</em></p>');
+
+        $.ajax({
+            url: '/plugins/gpu-switch-manager/scripts/get_gpu_binding.php',
+            method: 'GET',
+            dataType: 'json',
+            success: function(data) {
+                if (data.gpus && data.gpus.length > 0) {
+                    var html = '<table style="width: 100%; border-collapse: collapse;">';
+                    html += '<tr style="background: #e0e0e0;"><th style="padding: 8px; text-align: left;">GPU</th><th style="padding: 8px; text-align: left;">Current Binding</th><th style="padding: 8px; text-align: left;">Driver</th><th style="padding: 8px; text-align: left;">Available</th></tr>';
+
+                    // Populate GPU dropdown
+                    $('#targetGPU').find('option').remove().end().append('<option value="">Select GPU...</option>');
+
+                    $.each(data.gpus, function(index, gpu) {
+                        html += '<tr style="border-bottom: 1px solid #ddd;">';
+                        html += '<td style="padding: 8px;">' + gpu.name + '</td>';
+                        html += '<td style="padding: 8px;">' + gpu.binding + '</td>';
+                        html += '<td style="padding: 8px;">' + gpu.driver + '</td>';
+                        html += '<td style="padding: 8px;">' + (gpu.available ? 'Yes' : 'No') + '</td>';
+                        html += '</tr>';
+
+                        // Add to dropdown
+                        $('#targetGPU').append('<option value="' + gpu.id + '">' + gpu.name + '</option>');
+                    });
+
+                    html += '</table>';
+                    $('#gpu-binding').html(html);
+                } else {
+                    $('#gpu-binding').html('<p><em>No GPUs detected or unable to retrieve binding information.</em></p>');
+                }
+            },
+            error: function() {
+                $('#gpu-binding').html('<p><em>Error loading GPU binding information. Please try again.</em></p>');
+            }
+        });
+    }
+
+    function applyGPUBinding() {
+        var gpuId = $('#targetGPU').val();
+        var bindingMode = $('#bindingMode').val();
+
+        if (!gpuId) {
+            alert('Please select a GPU first.');
+            return;
+        }
+
+        $.ajax({
+            url: '/plugins/gpu-switch-manager/scripts/apply_gpu_binding.php',
+            method: 'POST',
+            data: {
+                gpu_id: gpuId,
+                binding_mode: bindingMode
+            },
+            success: function() {
+                alert('GPU binding applied successfully!');
+                loadGPUBinding();
+                loadGPUStats();
+            },
+            error: function() {
+                alert('Error applying GPU binding. Please try again.');
+            }
+        });
+    }
+});
+</script>
+
+<h2><b>GPU Switch Manager Settings</b></h2>
+<form name="gpu-switch-manager" method="POST">
+    <input type="hidden" name="#file" value="gpu-switch-manager/gpu-switch-manager.cfg" />
+
+    <h3><b>General Settings</b></h3>
+
+    Plugin Enabled:
+    <select id="ENABLED" name="ENABLED" size="1">
+        <option value="true" <?=($cfg['ENABLED'] == 'true') ? 'selected' : ''?>>Yes</option>
+        <option value="false" <?=($cfg['ENABLED'] == 'false' || !isset($cfg['ENABLED'])) ? 'selected' : ''?>>No</option>
+      </select>
+
+    Debug Mode:
+    <select id="DEBUG" name="DEBUG" size="1">
+        <option value="true" <?=($cfg['DEBUG'] == 'true') ? 'selected' : ''?>>Yes</option>
+        <option value="false" <?=($cfg['DEBUG'] == 'false') ? 'selected' : ''?>>No</option>
+      </select>
+
+    Log Level:
+    <select id="LOG_LEVEL" name="LOG_LEVEL" size="1">
+        <option value="debug" <?=($cfg['LOG_LEVEL'] == 'debug') ? 'selected' : ''?>>Debug</option>
+        <option value="info" <?=($cfg['LOG_LEVEL'] == 'info') ? 'selected' : ''?>>Info</option>
+        <option value="warning" <?=($cfg['LOG_LEVEL'] == 'warning') ? 'selected' : ''?>>Warning</option>
+        <option value="error" <?=($cfg['LOG_LEVEL'] == 'error') ? 'selected' : ''?>>Error</option>
+      </select>
+
+    <h3><b>Operation Settings</b></h3>
+
+    Auto Start VM:
+    <select id="AUTO_START_VM" name="AUTO_START_VM" size="1">
+        <option value="true" <?=($cfg['AUTO_START_VM'] == 'true') ? 'selected' : ''?>>Yes</option>
+        <option value="false" <?=($cfg['AUTO_START_VM'] == 'false') ? 'selected' : ''?>>No</option>
+      </select>
+
+    Verify Binding:
+    <select id="VERIFY_BINDING" name="VERIFY_BINDING" size="1">
+        <option value="true" <?=($cfg['VERIFY_BINDING'] == 'true') ? 'selected' : ''?>>Yes</option>
+        <option value="false" <?=($cfg['VERIFY_BINDING'] == 'false') ? 'selected' : ''?>>No</option>
+      </select>
+
+    Timeout (seconds):
+    <input type="number" name="TIMEOUT_SECONDS" class="narrow" min="5" max="300" value="<?=$cfg['TIMEOUT_SECONDS'];?>" placeholder="30">
+    <br>
+
+    <h3><b>Safety Settings</b></h3>
+
+    Protect Primary GPU:
+    <select id="PROTECT_PRIMARY_GPU" name="PROTECT_PRIMARY_GPU" size="1">
+        <option value="true" <?=($cfg['PROTECT_PRIMARY_GPU'] == 'true') ? 'selected' : ''?>>Yes</option>
+        <option value="false" <?=($cfg['PROTECT_PRIMARY_GPU'] == 'false') ? 'selected' : ''?>>No</option>
+      </select>
+
+    Primary GPU:
+    <select id="PRIMARY_GPU" name="PRIMARY_GPU" size="1">
+        <option value="">Select GPU...</option>
+      </select>
+
+    Require Confirmation:
+    <select id="REQUIRE_CONFIRMATION" name="REQUIRE_CONFIRMATION" size="1">
+        <option value="true" <?=($cfg['REQUIRE_CONFIRMATION'] == 'true') ? 'selected' : ''?>>Yes</option>
+        <option value="false" <?=($cfg['REQUIRE_CONFIRMATION'] == 'false') ? 'selected' : ''?>>No</option>
+      </select>
+
+    Backup Configuration:
+    <select id="BACKUP_CONFIG" name="BACKUP_CONFIG" size="1">
+        <option value="true" <?=($cfg['BACKUP_CONFIG'] == 'true') ? 'selected' : ''?>>Yes</option>
+        <option value="false" <?=($cfg['BACKUP_CONFIG'] == 'false') ? 'selected' : ''?>>No</option>
+      </select>
+
+    <h3><b>Dashboard Settings</b></h3>
+
+    Refresh Interval (seconds):
+    <input type="number" name="REFRESH_INTERVAL" class="narrow" min="1" max="60" value="<?=$cfg['REFRESH_INTERVAL'];?>" placeholder="5">
+    <br>
+
+    Show Temperatures:
+    <select id="SHOW_TEMPERATURES" name="SHOW_TEMPERATURES" size="1">
+        <option value="true" <?=($cfg['SHOW_TEMPERATURES'] == 'true') ? 'selected' : ''?>>Yes</option>
+        <option value="false" <?=($cfg['SHOW_TEMPERATURES'] == 'false') ? 'selected' : ''?>>No</option>
+      </select>
+
+    Show Utilization:
+    <select id="SHOW_UTILIZATION" name="SHOW_UTILIZATION" size="1">
+        <option value="true" <?=($cfg['SHOW_UTILIZATION'] == 'true') ? 'selected' : ''?>>Yes</option>
+        <option value="false" <?=($cfg['SHOW_UTILIZATION'] == 'false') ? 'selected' : ''?>>No</option>
+      </select>
+
+    <h3><b>GPU Profiles</b></h3>
+
+    <p><em>GPU profiles allow you to save and restore GPU configurations for different use cases.</em></p>
+
+    <h4><b>Profile Management</b></h4>
+
+    <p><strong>Current Profiles:</strong></p>
+    <div id="profile-list" style="margin: 10px 0; padding: 10px; background: #f9f9f9; border: 1px solid #ddd; border-radius: 4px;">
+        <p><em>Loading profiles...</em></p>
+    </div>
+
+    <div style="margin: 10px 0;">
+        <button type="button" id="btnCreateProfile" class="button">Create New Profile</button>
+        <button type="button" id="btnRefreshProfiles" class="button">Refresh Profiles</button>
+    </div>
+
+    <h4><b>Profiles Enabled</b></h4>
+
+    <p><strong>Select profiles to enable for event monitoring:</strong></p>
+    <div id="profiles-enabled-list" style="margin: 10px 0; padding: 10px; background: #e8f4f8; border: 1px solid #b8d4e8; border-radius: 4px;">
+        <p><em>Loading profiles...</em></p>
+    </div>
+    <p><small style="color: #666;">Enabled profiles will actively monitor VM startup and shutdown events to manage GPU switching automatically.</small></p>
+
+    <!-- Profile Creation/Edit Modal -->
+    <div id="profileModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000;">
+        <div style="position: relative; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 20px; border-radius: 8px; max-width: 800px; width: 90%; max-height: 90vh; overflow-y: auto;">
+            <h3 id="profileModalTitle">Create New Profile</h3>
+            <form id="profileForm">
+                <input type="hidden" id="editProfileName" value="">
+
+                <div style="margin: 15px 0;">
+                    <label><strong>Target VM (Profile Name):</strong></label>
+                    <select id="profileVM" required style="width: 100%; margin-top: 5px; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+                        <option value="">Select VM...</option>
+                    </select>
+                    <small style="color: #666;">This VM will be monitored for startup and shutdown events</small>
+                </div>
+
+                <div style="margin: 15px 0;">
+                    <label><strong>GPU to Pass Through:</strong></label>
+                    <select id="profileGPU" required style="width: 100%; margin-top: 5px; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+                        <option value="">Select GPU...</option>
+                    </select>
+                </div>
+
+                <div style="margin: 15px 0;">
+                    <label><strong>GPU Containers (Docker containers that use GPU):</strong></label>
+                    <div id="gpuContainersList" style="margin-top: 5px; padding: 10px; background: #f9f9f9; border: 1px solid #ddd; border-radius: 4px; max-height: 200px; overflow-y: auto;">
+                        <p><em>Loading Docker containers...</em></p>
+                    </div>
+                    <small style="color: #666;">Select containers that use the GPU. These will be stopped when VM starts and restarted when VM stops.</small>
+                </div>
+
+                <div style="margin: 15px 0;">
+                    <label><strong>CPU Containers (Docker containers that replace GPU functionality):</strong></label>
+                    <div id="cpuContainersList" style="margin-top: 5px; padding: 10px; background: #f9f9f9; border: 1px solid #ddd; border-radius: 4px; max-height: 200px; overflow-y: auto;">
+                        <p><em>Loading Docker containers...</em></p>
+                    </div>
+                    <small style="color: #666;">Select containers that provide CPU-based alternatives. These will be started when VM stops.</small>
+                </div>
+
+                <div style="margin: 15px 0;">
+                    <label><strong>Other VMs to Shutdown:</strong></label>
+                    <div id="otherVMsShutdownList" style="margin-top: 5px; padding: 10px; background: #f9f9f9; border: 1px solid #ddd; border-radius: 4px; max-height: 200px; overflow-y: auto;">
+                        <p><em>Loading VMs...</em></p>
+                    </div>
+                    <small style="color: #666;">Select VMs that should be shutdown when this profile's VM starts.</small>
+                </div>
+
+                <div style="margin: 15px 0;">
+                    <label><strong>Other VMs to Restart (with priority):</strong></label>
+                    <div id="otherVMsRestartList" style="margin-top: 5px; padding: 10px; background: #f9f9f9; border: 1px solid #ddd; border-radius: 4px; max-height: 200px; overflow-y: auto;">
+                        <p><em>Loading VMs...</em></p>
+                    </div>
+                    <small style="color: #666;">Select VMs that should be restarted when this profile's VM starts. Use priority numbers (1 = highest priority).</small>
+                </div>
+
+                <div style="margin-top: 20px; text-align: right;">
+                    <button type="button" id="btnCancelProfile" class="button">Cancel</button>
+                    <button type="submit" id="btnSaveProfile" class="button">Save Profile</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <h4><b>Real-time GPU Statistics</b></h4>
+
+    <div id="gpu-stats" style="margin: 10px 0; padding: 15px; background: #f0f8ff; border: 1px solid #b0d4f1; border-radius: 4px;">
+        <p><em>Loading GPU statistics...</em></p>
+    </div>
+
+    <div style="margin: 10px 0;">
+        <button type="button" id="btnRefreshStats" class="button">Refresh Statistics</button>
+        <label style="margin-left: 10px;">
+            <input type="checkbox" id="autoRefreshStats" <?=($cfg['AUTO_REFRESH_STATS'] == 'true') ? 'checked' : ''?>> Auto-refresh (5s)
+        </label>
+    </div>
+
+    <h4><b>GPU Binding Controls</b></h4>
+
+    <div id="gpu-binding" style="margin: 10px 0; padding: 15px; background: #fff8f0; border: 1px solid #f5d4a3; border-radius: 4px;">
+        <p><em>Loading GPU binding information...</em></p>
+    </div>
+
+    <div style="margin: 10px 0;">
+        <label>Target GPU:</label>
+        <select id="targetGPU" name="TARGET_GPU" size="1" style="margin-left: 10px;">
+            <option value="">Select GPU...</option>
+        </select>
+
+        <label style="margin-left: 20px;">Binding Mode:</label>
+        <select id="bindingMode" name="BINDING_MODE" size="1" style="margin-left: 10px;">
+            <option value="host">Host/Docker</option>
+            <option value="vm">VM Passthrough</option>
+            <option value="none">Unbound</option>
+        </select>
+
+        <button type="button" id="btnApplyBinding" class="button" style="margin-left: 10px;">Apply Binding</button>
+    </div>
+
+    <h4><b>Docker/VM Integration</b></h4>
+
+    <div style="margin: 10px 0;">
+        <label>Auto-start VM with GPU:</label>
+        <select id="autoStartVM" name="AUTO_START_VM" size="1" style="margin-left: 10px;">
+            <option value="true" <?=($cfg['AUTO_START_VM'] == 'true') ? 'selected' : ''?>>Yes</option>
+            <option value="false" <?=($cfg['AUTO_START_VM'] == 'false') ? 'selected' : ''?>>No</option>
+        </select>
+    </div>
+
+    <div style="margin: 10px 0;">
+        <label>Target VM Name:</label>
+        <input type="text" name="TARGET_VM_NAME" value="<?=$cfg['TARGET_VM_NAME'];?>" placeholder="e.g., gaming-vm" style="margin-left: 10px; width: 200px;">
+    </div>
+
+    <div style="margin: 10px 0;">
+        <label>Docker Container Integration:</label>
+        <select id="dockerIntegration" name="DOCKER_INTEGRATION" size="1" style="margin-left: 10px;">
+            <option value="true" <?=($cfg['DOCKER_INTEGRATION'] == 'true') ? 'selected' : ''?>>Enabled</option>
+            <option value="false" <?=($cfg['DOCKER_INTEGRATION'] == 'false') ? 'selected' : ''?>>Disabled</option>
+        </select>
+    </div>
+
+    <div style="margin: 10px 0;">
+        <label>Protected Containers (comma-separated):</label>
+        <input type="text" name="PROTECTED_CONTAINERS" value="<?=$cfg['PROTECTED_CONTAINERS'];?>" placeholder="e.g., plex,emby,jellyfin" style="margin-left: 10px; width: 300px;">
+    </div>
+
+    <div style="margin: 10px 0;">
+        <label>VM Shutdown on GPU Release:</label>
+        <select id="vmShutdown" name="VM_SHUTDOWN_ON_RELEASE" size="1" style="margin-left: 10px;">
+            <option value="true" <?=($cfg['VM_SHUTDOWN_ON_RELEASE'] == 'true') ? 'selected' : ''?>>Yes</option>
+            <option value="false" <?=($cfg['VM_SHUTDOWN_ON_RELEASE'] == 'false') ? 'selected' : ''?>>No</option>
+        </select>
+    </div>
+
+    <p><strong>Note:</strong> Profile management and advanced GPU operations are available through the main GPU Switch Manager interface.</p>
+    <p>Access the full GPU management interface at: <a href="/plugins/gpu-switch-manager/gpu-switch-manager.php" target="_blank">GPU Switch Manager Dashboard</a></p>
+
+    <br><br><br>
+
+    <input id="btnApply" type="submit" name="#apply" value="_(Apply)_"><input type="button" value="Done" onClick="done()">
+
+    <br><br><br>
+    <strong>Note:</strong> Changes will take effect immediately after applying.
+</form>
