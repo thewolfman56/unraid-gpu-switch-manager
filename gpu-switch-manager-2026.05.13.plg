@@ -5,7 +5,7 @@
   <!ENTITY version   "2026.05.13">
   <!ENTITY gitURL    "https://github.com/&author;/unraid-gpu-switch-manager/releases/download/v">
   <!ENTITY pluginURL "https://raw.githubusercontent.com/&author;/unraid-gpu-switch-manager/master/&name;.plg">
-  <!ENTITY md5       "316995c5ff42d0631d06671f32188105">
+  <!ENTITY md5       "c6a2a31460257a6bf817e548c336f06f">
   <!ENTITY plugin    "/boot/config/plugins/&name;">
   <!ENTITY emhttp    "/usr/local/emhttp/plugins/&name;">
 ]>
@@ -15,9 +15,10 @@
 <CHANGES>
 
 ###2026.05.13
+- Fixed blank settings page by correcting Menu attribute from "Utilities" to "Settings"
+- Settings page now properly accessible at /Settings/GPUSwitchManager
 - Verified MD5 hash matches between .plg and .txz files
 - Ensured proper versioning syntax for release
-- Confirmed icon display and settings page functionality
 
 ###2026.05.12
 - Fixed icon display issue by using built-in icon-hardware instead of custom icon.png
