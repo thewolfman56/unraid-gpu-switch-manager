@@ -3,7 +3,7 @@
   <!ENTITY name      "gpu-switch-manager">
   <!ENTITY author    "thewolfman56">
   <!ENTITY version   "2026.05.13">
-  <!ENTITY gitURL    "https://github.com/&author;/unraid-gpu-switch-manager/releases/download">
+  <!ENTITY gitURL    "https://github.com/&author;/unraid-gpu-switch-manager/releases/download/v">
   <!ENTITY pluginURL "https://raw.githubusercontent.com/&author;/unraid-gpu-switch-manager/master/&name;.plg">
   <!ENTITY md5       "316995c5ff42d0631d06671f32188105">
   <!ENTITY plugin    "/boot/config/plugins/&name;">
