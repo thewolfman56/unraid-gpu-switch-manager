@@ -5,20 +5,20 @@
   <!ENTITY version   "2026.05.12">
   <!ENTITY gitURL    "https://github.com/&author;/unraid-gpu-switch-manager/releases/download">
   <!ENTITY pluginURL "https://raw.githubusercontent.com/&author;/unraid-gpu-switch-manager/master/&name;.plg">
-  <!ENTITY md5       "49265241cd016cf7159dfdabea1f574c">
+  <!ENTITY md5       "316995c5ff42d0631d06671f32188105">
   <!ENTITY plugin    "/boot/config/plugins/&name;">
   <!ENTITY emhttp    "/usr/local/emhttp/plugins/&name;">
 ]>
 
-<PLUGIN name="&name;" author="&author;" version="&version;" pluginURL="&pluginURL;" min="6.12.0" launch="Settings/GPUSwitchManager" icon="icon.png">
+<PLUGIN name="&name;" author="&author;" version="&version;" pluginURL="&pluginURL;" min="6.12.0" launch="Settings/GPUSwitchManager" icon="icon-hardware">
 
 <CHANGES>
 
 ###2026.05.12
-- Fixed blank settings page by placing GPUSwitchManager.page in correct location
-- Fixed icon display by using custom icon.png instead of built-in icon-hardware
-- Updated package structure to match gpustat-unraid template
-- Changed version format to YYYY.MM.DD (with .xx suffix for multiple daily releases)
+- Fixed icon display issue by using built-in icon-hardware instead of custom icon.png
+- Updated plugin manifest to use proper unRAID icon reference
+- Rebuilt package with corrected MD5 hash
+- Settings page now properly accessible at /Settings/GPUSwitchManager
 
 ###2026.05.11
 - Added comprehensive memory system for project context persistence
