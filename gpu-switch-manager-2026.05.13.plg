@@ -194,7 +194,7 @@ rm -f $(ls /boot/config/plugins/&name;/gpu-switch-manager*.txz 2>/dev/null|grep 
 </FILE>
 
 <FILE Name="/boot/config/plugins/&name;/gpu-switch-manager-&version;.txz" Run="upgradepkg --install-new">
-<URL>&gitURL;/&version;/gpu-switch-manager-&version;.txz</URL>
+<URL>&gitURL;&version;/gpu-switch-manager-&version;.txz</URL>
 <MD5>&md5;</MD5>
 </FILE>
 
